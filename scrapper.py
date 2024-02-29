@@ -9,12 +9,17 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
 class ScrapperSBid:
-    def __init__(self):
+    def __init__(self, search:str = "TARRAGONA", cercaPerCodiPostal:bool = False):
         chromedriver_autoinstaller.install()
 
         self.driver = webdriver.Chrome()
         self.driver.implicitly_wait(10) # segundos
         self.wait = WebDriverWait(self.driver, 20, 1, TimeoutException)
+        self.search = search
+        self.cercaPerCodiPostal = False
+
+        if(cercaPerCodiPostal):
+            self.cercaPerCodiPostal = True
 
     def login(self):
         self.driver.get("https://www.empresaiformacio.org/sBid")
@@ -135,8 +140,17 @@ class ScrapperSBid:
         dades.update(self.nomsUsuaris())
 
         self.entraIframe(True)
+        
+        returnLink = self.wait.until(EC.presence_of_element_located((By.XPATH, "//nav[@id = 'titleInfo']/a")))
+        if(not ("Resultat Cerca" in returnLink.text)):
+            self.driver.refresh()
+            self.entraIframe(True)
+            returnLink = self.wait.until(EC.presence_of_element_located((By.XPATH, "//nav[@id = 'titleInfo']/a")))
 
-        self.wait.until(EC.presence_of_element_located((By.XPATH, "//nav[@id = 'titleInfo']/a"))).click()
+
+
+        returnLink.click()
+
         return dades
     
 
@@ -198,14 +212,19 @@ class ScrapperSBid:
             if codiCicle in option.text:
                 option.click()
                 break
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, "//a[@href = '#dadesCT1']"))).click()
+        self.wait.until(EC.element_to_be_clickable((By.XPATH, "//a[@href = '#dadesEmpresa1']"))).click()
 
-        municipi = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@id='dadesCT1_2']/div/div/input[@type='text']")))
+        if(self.cercaPerCodiPostal):
+            codiPostal = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@id='dadesEmpresa1_2']/div/input[@type='text']")))
+            codiPostal.clear()
+            codiPostal.send_keys(self.search)
+        else:
+            municipi = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@id='dadesEmpresa1_2']/div/div/input[@type='text']")))
 
-        municipi.clear()
-        municipi.send_keys(city)
+            municipi.clear()
+            municipi.send_keys(self.search)
 
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, f"//tbody/tr[@textinput = '{city}']"))).click()
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, f"//tbody/tr[@textinput = '{city}']"))).click()
 
         self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@class='panel-footer']/span[@type = 'button'][@title = 'Cercar']"))).click()
 

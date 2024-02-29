@@ -1,6 +1,7 @@
 config.py
 _pycache_/
 *.pyc
+*.csv
 bin/
 include/
 lib/

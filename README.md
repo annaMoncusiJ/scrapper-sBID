@@ -19,7 +19,7 @@ pip install selenium
 
 ## Executar el programa
 
-Per executar el programa, simplement has de córrer el fitxer `main.py`.
+Per executar el programa, simplement dins de `main.py` has de descomentar la línia que t'interessa per a fer la cerca i córrer el fitxer.
 
 ---
 
@@ -40,4 +40,4 @@ pip install selenium
 
 ## Running the Program
 
-To run the program, simply execute the `main.py` file.
+To run the program, simply uncomment the line you are interested in within `main.py` to perform the search and run the file.

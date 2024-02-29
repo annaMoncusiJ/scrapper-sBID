@@ -1,3 +1,8 @@
 config.py
-_pycache_
+_pycache_/
 *.pyc
+bin/
+include/
+lib/
+lib64
+pyvenv.cfg

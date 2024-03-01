@@ -89,7 +89,7 @@ class ScrapperSBid:
                 
                 dades.update(self.agafaDadesEmpresa())
 
-                self.csv_writer.writerow([dades["empresa"], dades["codi"], dades["categoria"], dades["estat"], dades["correuElectronic"], dades["telefon"], dades["responsables"]])
+                self.csv_writer.writerow([dades["empresa"], dades["codi"], dades["categoria"], dades["estat"], dades["correuElectronic"], dades["telefon"], dades["responsables"], dades["tutors"]])
 
             self.entraIframe(True)
             self.entraIframe()
@@ -178,6 +178,14 @@ class ScrapperSBid:
 
         dades = {}
         dades["responsables"] = ";".join(responsables)
+
+        tutors = usuaris.find_element(By.XPATH, "//div[h4/a/label[contains(text(), 'Tutor/a')]]/following-sibling::div")
+        tutors = tutors.find_elements(By.XPATH, "div/div")
+
+        tutors = [tutor.find_element(By.TAG_NAME, "a").text for tutor in tutors]
+
+        dades["tutors"] = ";".join(tutors)
+
         return dades
 
     def seguentPagina(self):

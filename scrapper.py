@@ -1,18 +1,45 @@
 import chromedriver_autoinstaller
 import csv
+import json
+import os
+import sys
+
 from config import *
+from pantalla_carrega import LoadingScreen
 from selenium.common.exceptions import TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
+from tkinter import messagebox
+from threading import Thread
+
 
 class ScrapperSBid:
-    def __init__(self, search:str = "TARRAGONA", cercaPerCodiPostal:bool = False):
+    def __init__(self, password:str, search:str = "TARRAGONA", cercaPerCodiPostal:bool = False):
         chromedriver_autoinstaller.install()
 
-        self.driver = webdriver.Chrome()
+        self.paginaCarrega = None
+
+        loading_screen = LoadingScreen()  # Crear instancia de LoadingScreen
+        loading_thread = Thread(target=self.show_loading_screen, args=(loading_screen,))
+        loading_thread.start()        
+        with open("form_data.json", "r") as json_file:
+            data = json.load(json_file)
+            self.username = data.get(0, data.get("username", ""))
+            self.cycle_code = data.get(0, data.get("cycle_code", ""))
+            hide_browser = data.get("hide_browser", False)
+
+        self.password = password
+
+        if hide_browser:
+            options = webdriver.ChromeOptions()
+            options.add_argument("--headless")
+            self.driver = webdriver.Chrome(options=options)
+        else:
+            self.driver = webdriver.Chrome()
+
         self.driver.implicitly_wait(10) # segundos
         self.wait = WebDriverWait(self.driver, 20, 1, TimeoutException)
         self.search = search
@@ -20,6 +47,13 @@ class ScrapperSBid:
 
         if(cercaPerCodiPostal):
             self.cercaPerCodiPostal = True
+            
+
+    def show_loading_screen(self, loading_screen):
+        # Crea la pantalla de carga
+        self.paginaCarrega = loading_screen
+        self.paginaCarrega.show()
+
 
     def login(self):
         self.driver.get("https://www.empresaiformacio.org/sBid")
@@ -29,15 +63,22 @@ class ScrapperSBid:
         self.entraIframe(True)
 
 
-        username_input = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@id='username']")))
-        username_input.clear()
-        username_input.send_keys(username)
+        try:
+            username_input = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@id='username']")))
+            username_input.clear()
+            username_input.send_keys(self.username)
 
-        self.wait.until(EC.element_to_be_clickable((By.ID, "password"))).clear()
-        self.wait.until(EC.element_to_be_clickable((By.ID, "password"))).send_keys(f"{password}\n")
-        
-        # Espera fins que l'enllaç "Entitat" sigui clicable i fes clic
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, "//ul[@id='menu_items']/li/a[contains(text(), 'Entitat')]"))).click()
+            self.wait.until(EC.element_to_be_clickable((By.ID, "password"))).clear()
+            self.wait.until(EC.element_to_be_clickable((By.ID, "password"))).send_keys(f"{self.password}\n")
+                
+            # Espera fins que l'enllaç "Entitat" sigui clicable i fes clic
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//ul[@id='menu_items']/li/a[contains(text(), 'Entitat')]"))).click()
+
+        except TimeoutException:
+            messagebox.showinfo("Error", "Usuari o contrasenya incorrectes")
+            self.driver.quit()
+            sys.exit()
+            
 
         # Espera fins que l'enllaç "Cerca d'Entitats" sigui clicable i fes clic
         self.wait.until(EC.element_to_be_clickable((By.XPATH, "//ul[@id='menu_items']/li/a[text()='Entitat']/following-sibling::ul/li/a[contains(text(), \"Cerca d'Entitats\")]"))).click()
@@ -72,7 +113,7 @@ class ScrapperSBid:
         self.entraIframe(True)
         self.entraIframe()
         hiHaPaginaSeguent = True
-
+        self.numPagines()
         while(hiHaPaginaSeguent):
 
             no_more_tables = self.wait.until(EC.presence_of_element_located((By.ID, "no-more-tables")))
@@ -91,40 +132,49 @@ class ScrapperSBid:
 
                 self.csv_writer.writerow([dades["empresa"], dades["codi"], dades["categoria"], dades["estat"], dades["correuElectronic"], dades["telefon"], dades["responsables"], dades["tutors"]])
 
+
             self.entraIframe(True)
             self.entraIframe()
 
             hiHaPaginaSeguent = self.seguentPagina()
 
 
+
     def agafaDadesGenerals(self, i):
-        self.entraIframe(True)
-        self.entraIframe()
+        try:
+            self.entraIframe(True)
+            self.entraIframe()
 
-        no_more_tables = self.wait.until(EC.presence_of_element_located((By.ID, "no-more-tables")))
+            no_more_tables = self.wait.until(EC.presence_of_element_located((By.ID, "no-more-tables")))
 
-        # Troba tots els elements div amb la classe "form-group" dins de l'element amb l'ID "no-more-tables"
-        form_groups = no_more_tables.find_elements(By.CLASS_NAME, "form-group")
-        tables = no_more_tables.find_elements(By.TAG_NAME, "table")
+            # Troba tots els elements div amb la classe "form-group" dins de l'element amb l'ID "no-more-tables"
+            form_groups = no_more_tables.find_elements(By.CLASS_NAME, "form-group")
+            tables = no_more_tables.find_elements(By.TAG_NAME, "table")
 
-        form_group = form_groups[i]
+            form_group = form_groups[i]
 
-        empresa = form_group.find_element(By.TAG_NAME, 'a').text
+            empresa = form_group.find_element(By.TAG_NAME, 'a').text
 
-        taula = tables[i]
-        
-        codi = taula.find_element(By.XPATH, "tbody/tr/td[@data-title = 'CODI']/a")
-        codiText = codi.text
-        categoria = taula.find_element(By.XPATH, "tbody/tr/td[@data-title = 'CATEGORIA']").text
+            taula = tables[i]
+            
+            codi = taula.find_element(By.XPATH, "tbody/tr/td[@data-title = 'CODI']/a")
+            codiText = codi.text
+            categoria = taula.find_element(By.XPATH, "tbody/tr/td[@data-title = 'CATEGORIA']").text
 
-        codi.click()
+            codi.click()
 
-        dades = {}
-        dades["empresa"] = empresa
-        dades["codi"] = codiText
-        dades["categoria"] = categoria
+            dades = {}
+            dades["empresa"] = empresa
+            dades["codi"] = codiText
+            dades["categoria"] = categoria
 
-        return dades
+            self.paginaCarrega.add_step()
+
+            return dades
+        except Exception as e:
+            print("Error: " + str(e))
+            self.driver.close()
+            self.paginaCarrega.close()
     
     def agafaDadesEmpresa(self):
         self.entraIframe(True)
@@ -196,6 +246,9 @@ class ScrapperSBid:
                 sguentPag.click()
         except TimeoutException:
             print("Ja no hi han més pagines")
+            self.driver.close()
+            self.paginaCarrega.close()
+
             return False
         
         return True
@@ -205,8 +258,6 @@ class ScrapperSBid:
 
         self.entraIframe()
 
-        # select = wait.until(EC.presence_of_element_located((By.ID, "cod_estudi_pk")))
-        # select.click()
 
         select_element = self.wait.until(EC.presence_of_element_located((By.XPATH, "//select[@id='cod_estudi_pk']")))
 
@@ -217,7 +268,7 @@ class ScrapperSBid:
 
         #Busca l'opció que conte el codi del cicle
         for option in options:
-            if codiCicle in option.text:
+            if self.cycle_code in option.text:
                 option.click()
                 break
         self.wait.until(EC.element_to_be_clickable((By.XPATH, "//a[@href = '#dadesEmpresa1']"))).click()
@@ -232,7 +283,7 @@ class ScrapperSBid:
             municipi.clear()
             municipi.send_keys(self.search)
 
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, f"//tbody/tr[@textinput = '{city}']"))).click()
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, f"//tbody/tr[1]"))).click()
 
         self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@class='panel-footer']/span[@type = 'button'][@title = 'Cercar']"))).click()
 
@@ -252,3 +303,11 @@ class ScrapperSBid:
 
             self.login()
     
+
+    def numPagines(self):
+        numPag = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@id = 'no-more-tables']/nav/ul/li[a/span/text() != '»'][a/span/text() != '«']")))
+        numPag = len(numPag)
+        maxLen = numPag*5
+
+        self.paginaCarrega.set_max(maxLen)
+

@@ -1,6 +1,13 @@
 # scrapper-sBID
 Obté les dades de les empreses pertanyents al cicle que desitgis mitjançant l'ús de sBID, i aconsegueix-les en format CSV.
 
+## Interfície gràfica
+Per utilitzar la interfície gràfica del programa, segueix els passos següents:
+
+1. Descarrega el fitxer programa.zip.
+2. Descomprimeix el fitxer.
+3. Accedeix a la carpeta descomprimida i obre el fitxer main.exe.
+
 ## Començar
 
 Per començar, has de seguir aquests passos:
@@ -22,6 +29,13 @@ pip install selenium
 Per executar el programa, simplement dins de `main.py` has de descomentar la línia que t'interessa per a fer la cerca i córrer el fitxer.
 
 ---
+
+## Graphical Interface
+To use the program's graphical interface, follow these steps:
+
+1. Download the file programa.zip.
+2. Extract the file.
+3. Navigate to the extracted folder and open the file main.exe.
 
 ## Getting Started
 

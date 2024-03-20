@@ -173,8 +173,7 @@ class ScrapperSBid:
             return dades
         except Exception as e:
             print("Error: " + str(e))
-            self.driver.close()
-            self.paginaCarrega.close()
+            sys.exit()
     
     def agafaDadesEmpresa(self):
         self.entraIframe(True)
@@ -306,7 +305,7 @@ class ScrapperSBid:
 
     def numPagines(self):
         numPag = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@id = 'no-more-tables']/nav/ul/li[a/span/text() != '»'][a/span/text() != '«']")))
-        numPag = len(numPag)
+        numPag = len(numPag)/2
         maxLen = numPag*5
 
         self.paginaCarrega.set_max(maxLen)
